@@ -9,7 +9,7 @@ class Sale extends Model
     protected $fillable = [
         'customer_id',
         'products',
-        'due_date', 
+        'due_date',
         'parcels'
     ];
 
@@ -21,5 +21,12 @@ class Sale extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function products()
+    {
+        return $this->belongsToMany(Product::class)
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 }

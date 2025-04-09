@@ -13,4 +13,11 @@ class Product extends Model
         'sale_value', 
         'description'
     ];
+    
+    public function sales()
+{
+    return $this->belongsToMany(Sale::class)
+                ->withPivot('quantity')
+                ->withTimestamps();
+}
 }
