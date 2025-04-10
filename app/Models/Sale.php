@@ -8,7 +8,6 @@ class Sale extends Model
 {
     protected $fillable = [
         'customer_id',
-        'products',
         'due_date',
         'parcels'
     ];
