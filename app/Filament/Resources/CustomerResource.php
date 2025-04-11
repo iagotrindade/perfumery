@@ -18,6 +18,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Forms\Components\DatePicker;
@@ -31,6 +32,8 @@ class CustomerResource extends Resource
     protected static ?string $model = Customer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
+
+    protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?string $modelLabel = 'Clientes';
 
@@ -190,6 +193,7 @@ class CustomerResource extends Resource
                         ->title('Cliente deletado')
                         ->icon('heroicon-o-user-group')
                         ->body($authUser->name . ' deletou o cliente ' . $record->name . '.')
+                        ->danger()
                         ->sendToDatabase($recipients);
                 }),
             ])
@@ -204,6 +208,18 @@ class CustomerResource extends Resource
     {
         return [
             //
+        ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Email' => $record->email,
         ];
     }
 

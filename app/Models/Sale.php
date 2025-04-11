@@ -13,7 +13,7 @@ class Sale extends Model
     ];
 
     protected $casts = [
-        'products' => 'array', // transforma o campo JSON em array automaticamente
+        // transforma o campo JSON em array automaticamente
         'due_date' => 'date',
     ];
 

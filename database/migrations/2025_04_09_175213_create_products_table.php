@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('images')->nullable(); // imagens
+            $table->string('image')->nullable(); // imagens
             $table->integer('quantity')->default(0); // estoque
             $table->decimal('cost_value', 10, 2);    // valor de custo
             $table->decimal('sale_value', 10, 2);    // valor de venda

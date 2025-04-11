@@ -3,14 +3,22 @@
 namespace App\Filament\Resources;
 
 use Filament\Forms;
+use App\Models\User;
 use Filament\Tables;
 use App\Models\Product;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use Filament\Resources\Resource;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Support\RawJs;
+use Filament\Resources\Resource;
+use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Forms\Components\FileUpload;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\ProductResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -24,50 +32,104 @@ class ProductResource extends Resource
 
     protected static ?string $modelLabel = 'Produtos';
 
+    protected static ?string $recordTitleAttribute = 'name';
+
     public static function form(Form $form): Form
     {
-        return $form->schema([
-            TextInput::make('name')->required(),
+        return $form
+            ->schema([
+                Section::make()
+                    ->schema([
+                        FileUpload::make('image')
+                            ->label('Imagem')
+                            ->acceptedFileTypes(['image/jpeg', 'image/jpg'])
+                            ->imageEditor()
+                            ->directory('products')
+                    ]),
+                Section::make()
+                    ->schema([
+                        TextInput::make('name')
+                            ->label('Nome')
+                            ->required(),
 
-            TextInput::make('quantity')
-                ->label('Quantidade em Estoque')
-                ->numeric()
-                ->minValue(0)
-                ->required(),
+                        TextInput::make('quantity')
+                            ->label('Quantidade em Estoque')
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
 
-            TextInput::make('cost_value')
-                ->label('Valor de Custo')
-                ->mask(RawJs::make(<<<'JS'
-                    $money($input, ',')
-                JS))
-                ->stripCharacters([','])
-                ->numeric()
-                ->inputMode('decimal'),
+                        TextInput::make('cost_value')
+                            ->label('Valor de Custo')
+                            ->stripCharacters([','])
+                            ->numeric()
+                            ->inputMode('decimal'),
 
-            TextInput::make('sale_value')
-                ->label('Valor de Venda')
-                ->mask(RawJs::make(<<<'JS'
-                    $money($input, ',')
-                JS))
-                ->stripCharacters([','])
-                ->numeric()
-                ->inputMode('decimal'),
-            Textarea::make('description')->rows(3),
-        ]);
+                        TextInput::make('sale_value')
+                            ->label('Valor de Venda')
+                            ->stripCharacters([','])
+                            ->numeric()
+                            ->inputMode('decimal'),
+                        TextArea::make('description')
+                            ->label('Descrição')
+                            ->columnSpan(2),
+
+                    ])->columns(2),
+            ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            Tables\Columns\TextColumn::make('name'),
-            Tables\Columns\TextColumn::make('quantity'),
-            Tables\Columns\TextColumn::make('sale_value')->money('BRL'),
+            ImageColumn::make('image')
+                ->label('Imagem')
+                ->circular()
+                ->size(50)
+                ->toggleable(),
+            TextColumn::make('name')
+                ->label('Nome')
+                ->searchable()
+                ->sortable()
+                ->toggleable(),
+            TextColumn::make('quantity')
+                ->label('Quantidade em Estoque')
+                ->sortable()
+                ->searchable()
+                ->toggleable(),
+            TextColumn::make('cost_value')
+                ->money('BRL')
+                ->label('Valor de Custo')
+                ->sortable()
+                ->searchable()
+                ->toggleable(),
+            TextColumn::make('sale_value')
+                ->money('BRL')
+                ->label('Valor de Venda')
+                ->sortable()
+                ->searchable()
+                ->toggleable(),
+            TextColumn::make('created_at')
+                ->label('Criado em')
+                ->dateTime('d M Y \à\s H:i')
+                ->sortable()
+                ->toggleable()
         ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),  
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()->before(function ($record) {
+                    $authUser = Auth::user();
+                    $recipients = User::all();
+
+                    Notification::make()
+                        ->title('Produto deletado')
+                        ->icon('heroicon-o-squares-plus')
+                        ->body($authUser->name . ' deletou o produto ' . $record->name . '.')
+                        ->danger()
+                        ->sendToDatabase($recipients);
+                }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -82,6 +144,19 @@ class ProductResource extends Resource
             //
         ];
     }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'description'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Estoque' => $record->quantity,
+        ];
+    }
+
 
     public static function getPages(): array
     {

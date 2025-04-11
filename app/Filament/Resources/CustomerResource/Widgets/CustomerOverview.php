@@ -16,17 +16,20 @@ class CustomerOverview extends BaseWidget
         $oneMonthAgo = Carbon::now()->subMonth()->startOfMonth();
 
         return [
-            Stat::make('Todos', Customer::all()->count()),
+            Stat::make('Todos', Customer::all()->count())
+                ->icon('heroicon-o-user-group'),
 
             // Clientes com compras no último mês
             Stat::make('Compras recentes', Customer::whereHas('sales', function ($query) use ($lastMonth) {
                 $query->where('created_at', '>=', $lastMonth);
-            })->count()),
+            })->count())
+                ->icon('heroicon-o-shopping-cart'),
 
             // Clientes que não compram há mais de um mês
             Stat::make('Inativos', Customer::whereDoesntHave('sales', function ($query) use ($oneMonthAgo) {
                 $query->where('created_at', '>=', $oneMonthAgo);
-            })->count()),
+            })->count())
+                ->icon('heroicon-o-arrow-trending-down'),
         ];
     }
 }

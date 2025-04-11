@@ -2,9 +2,13 @@
 
 namespace App\Filament\Resources\CustomerResource\Pages;
 
-use App\Filament\Resources\CustomerResource;
+use App\Models\User;
 use Filament\Actions;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\CustomerResource;
 
 class EditCustomer extends EditRecord
 {
@@ -15,5 +19,22 @@ class EditCustomer extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        $authUser = Auth::user();
+        $recipients = User::all();
+
+        $record->update($data);
+
+        Notification::make()
+            ->title('Cliente atualizado')
+            ->icon('heroicon-o-user-group')
+            ->body($authUser->name . ' atualizou o cliente ' . $record->name . '.')
+            ->success()
+            ->sendToDatabase($recipients);
+        
+        return $record;    
     }
 }
