@@ -1,33 +1,34 @@
 <?php
 
-namespace App\Filament\Resources\CustomerResource\Pages;
+namespace App\Filament\Resources\CategoryResource\Pages;
 
 use App\Models\User;
 use Filament\Actions;
+use App\Models\Category;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
-use App\Filament\Resources\CustomerResource;
+use App\Filament\Resources\CategoryResource;
 
-class EditCustomer extends EditRecord
+class EditCategory extends EditRecord
 {
-    protected static string $resource = CustomerResource::class;
+    protected static string $resource = CategoryResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make()->before(function ($record) {
+            Actions\DeleteAction::make()->before(function (Category $record) {
                 $authUser = Auth::user();
                 $recipients = User::all();
 
                 Notification::make()
-                    ->title('Cliente deletado')
-                    ->icon('heroicon-o-user-group')
-                    ->body($authUser->name . ' deletou o cliente ' . $record->name . '.')
+                    ->title('Categoria deletada')
+                    ->icon('heroicon-o-tag')
+                    ->body($authUser->name . ' deletou a categoria ' . $record->name . '.')
                     ->danger()
                     ->sendToDatabase($recipients);
-            }),
+            })->requiresConfirmation(),
         ];
     }
 
@@ -39,9 +40,9 @@ class EditCustomer extends EditRecord
         $record->update($data);
 
         Notification::make()
-            ->title('Cliente atualizado')
+            ->title('Categoria atualizada')
             ->icon('heroicon-o-user-group')
-            ->body($authUser->name . ' atualizou o cliente ' . $record->name . '.')
+            ->body($authUser->name . ' atualizou a categoria ' . $record->name . '.')
             ->success()
             ->sendToDatabase($recipients);
         

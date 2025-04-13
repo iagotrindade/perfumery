@@ -17,7 +17,17 @@ class EditProduct extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()->before(function ($record) {
+                $authUser = Auth::user();
+                $recipients = User::all();
+
+                Notification::make()
+                    ->title('Produto deletado')
+                    ->icon('heroicon-o-squares-plus')
+                    ->body($authUser->name . ' deletou o produto ' . $record->name . '.')
+                    ->danger()
+                    ->sendToDatabase($recipients);
+            }),
         ];
     }
 

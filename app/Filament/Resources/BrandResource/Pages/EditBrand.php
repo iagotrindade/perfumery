@@ -1,33 +1,34 @@
 <?php
 
-namespace App\Filament\Resources\CustomerResource\Pages;
+namespace App\Filament\Resources\BrandResource\Pages;
 
 use App\Models\User;
+use App\Models\Brand;
 use Filament\Actions;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
-use App\Filament\Resources\CustomerResource;
+use App\Filament\Resources\BrandResource;
 
-class EditCustomer extends EditRecord
+class EditBrand extends EditRecord
 {
-    protected static string $resource = CustomerResource::class;
+    protected static string $resource = BrandResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make()->before(function ($record) {
+            Actions\DeleteAction::make()->before(function (Brand $record) {
                 $authUser = Auth::user();
                 $recipients = User::all();
 
                 Notification::make()
-                    ->title('Cliente deletado')
-                    ->icon('heroicon-o-user-group')
-                    ->body($authUser->name . ' deletou o cliente ' . $record->name . '.')
+                    ->title('Marca deletada')
+                    ->icon('heroicon-o-rectangle-stack')
+                    ->body($authUser->name . ' deletou a marca ' . $record->name . '.')
                     ->danger()
                     ->sendToDatabase($recipients);
-            }),
+            })->requiresConfirmation(),
         ];
     }
 
@@ -39,9 +40,9 @@ class EditCustomer extends EditRecord
         $record->update($data);
 
         Notification::make()
-            ->title('Cliente atualizado')
+            ->title('Marca atualizada')
             ->icon('heroicon-o-user-group')
-            ->body($authUser->name . ' atualizou o cliente ' . $record->name . '.')
+            ->body($authUser->name . ' atualizou a marca ' . $record->name . '.')
             ->success()
             ->sendToDatabase($recipients);
         

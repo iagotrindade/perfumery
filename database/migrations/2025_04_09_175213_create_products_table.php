@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('image')->nullable(); // imagens
+            $table->foreignId('category_id')->constrained()->onDelete('cascade'); // categoria
+            $table->foreignId('brand_id')->constrained()->onDelete('cascade'); // marca
             $table->integer('quantity')->default(0); // estoque
             $table->decimal('cost_value', 10, 2);    // valor de custo
             $table->decimal('sale_value', 10, 2);    // valor de venda

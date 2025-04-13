@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Filament\Resources\UserResource\Pages;
+namespace App\Filament\Resources\BrandResource\Pages;
 
 use App\Models\User;
 use Filament\Actions;
 use Illuminate\Support\Facades\Auth;
-use App\Filament\Resources\UserResource;
 use Filament\Notifications\Notification;
+use App\Filament\Resources\BrandResource;
 use Filament\Resources\Pages\CreateRecord;
 
-class CreateUser extends CreateRecord
+class CreateBrand extends CreateRecord
 {
-    protected static string $resource = UserResource::class;
+    protected static string $resource = BrandResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
@@ -19,12 +19,12 @@ class CreateUser extends CreateRecord
         $recipients = User::all();
 
         Notification::make()
-            ->title('Usuário cadastrado')
-            ->icon('heroicon-o-users')
-            ->body($authUser->name . ' cadastrou o usuário ' . $data['name'] . '.')
+            ->title('Marca cadastrada')
+            ->icon('heroicon-o-rectangle-stack')
+            ->body($authUser->name . ' cadastrou a marca ' . $data['name'] . '.')
             ->success()
             ->sendToDatabase($recipients);
-            
+
         return $data;
     }
 }

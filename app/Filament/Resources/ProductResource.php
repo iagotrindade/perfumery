@@ -5,12 +5,15 @@ namespace App\Filament\Resources;
 use Filament\Forms;
 use App\Models\User;
 use Filament\Tables;
+use App\Models\Brand;
 use App\Models\Product;
+use App\Models\Category;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Support\RawJs;
 use Filament\Resources\Resource;
 use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
@@ -52,6 +55,16 @@ class ProductResource extends Resource
                             ->label('Nome')
                             ->required(),
 
+                        Select::make('category_id')
+                            ->label('Categoria')
+                            ->options(Category::all()->pluck('name', 'id'))
+                            ->searchable(),
+
+                        Select::make('brand_id')
+                            ->label('Marca')
+                            ->options(Brand::all()->pluck('name', 'id'))
+                            ->searchable(),
+
                         TextInput::make('quantity')
                             ->label('Quantidade em Estoque')
                             ->numeric()
@@ -62,13 +75,16 @@ class ProductResource extends Resource
                             ->label('Valor de Custo')
                             ->stripCharacters([','])
                             ->numeric()
-                            ->inputMode('decimal'),
+                            ->inputMode('decimal')
+                            ->required(),
 
                         TextInput::make('sale_value')
                             ->label('Valor de Venda')
                             ->stripCharacters([','])
                             ->numeric()
-                            ->inputMode('decimal'),
+                            ->inputMode('decimal')
+                            ->required(),
+                            
                         TextArea::make('description')
                             ->label('Descrição')
                             ->columnSpan(2),
@@ -117,7 +133,7 @@ class ProductResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),  
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()->before(function ($record) {
                     $authUser = Auth::user();

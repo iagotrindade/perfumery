@@ -9,6 +9,8 @@ class Product extends Model
     protected $fillable = [
         'image',
         'name',
+        'category_id',
+        'brand_id',
         'quantity',
         'cost_value',
         'sale_value',
@@ -21,8 +23,18 @@ class Product extends Model
 
     public function sales()
     {
-        return $this->belongsToMany(Sale::class)
+        return $this->belongsToMany(Sale::class, 'product_sale')
             ->withPivot('quantity')
             ->withTimestamps();
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
     }
 }
