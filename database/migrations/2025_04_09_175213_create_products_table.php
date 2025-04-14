@@ -21,6 +21,7 @@ return new class extends Migration
             $table->decimal('cost_value', 10, 2);    // valor de custo
             $table->decimal('sale_value', 10, 2);    // valor de venda
             $table->text('description')->nullable();
+            $table->boolean('show_on_catalog')->default(false);
             $table->timestamps();
         });
     }

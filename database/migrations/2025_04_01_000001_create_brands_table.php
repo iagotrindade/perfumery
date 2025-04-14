@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->string('description')->nullable();
+            $table->boolean('show_on_catalog')->default(false);
             $table->timestamps();
         });
     }
