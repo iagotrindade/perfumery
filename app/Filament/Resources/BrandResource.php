@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\BrandResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\BrandResource\RelationManagers;
+use Filament\Forms\Components\Toggle;
 
 class BrandResource extends Resource
 {
@@ -41,7 +42,12 @@ class BrandResource extends Resource
                             ->label('Nome')
                             ->required(),
                         Textarea::make('description')
-                            ->label('Descrição')
+                            ->label('Descrição'),
+                        Toggle::make('show_on_catalog')
+                            ->label('Mostrar no catálogo')
+                            ->default(true)
+                            ->inline(false)
+                            ->required(),
                     ])
             ]);
     }
@@ -63,6 +69,13 @@ class BrandResource extends Resource
                 TextColumn::make('products_count')
                     ->label('Produtos')
                     ->counts('products')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('show_on_catalog')
+                    ->label('Mostrar no catálogo')
+                    ->formatStateUsing(function ($state) {
+                        return $state ? 'Sim' : 'Não';
+                    })
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('created_at')

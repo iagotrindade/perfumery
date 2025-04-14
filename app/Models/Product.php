@@ -14,7 +14,8 @@ class Product extends Model
         'quantity',
         'cost_value',
         'sale_value',
-        'description'
+        'description',
+        'show_on_catalog',
     ];
 
     protected $casts = [

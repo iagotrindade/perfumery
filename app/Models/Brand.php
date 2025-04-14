@@ -9,6 +9,7 @@ class Brand extends Model
     protected $fillable = [
         'name',
         'description',
+        'show_on_catalog',
     ];
 
     public function products()

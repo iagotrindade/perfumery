@@ -14,6 +14,7 @@ use Filament\Support\RawJs;
 use Filament\Resources\Resource;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
@@ -84,7 +85,12 @@ class ProductResource extends Resource
                             ->numeric()
                             ->inputMode('decimal')
                             ->required(),
-                            
+                        Toggle::make('show_on_catalog')
+                            ->label('Mostrar no catálogo')
+                            ->default(true)
+                            ->inline(false)
+                            ->required(),
+
                         TextArea::make('description')
                             ->label('Descrição')
                             ->columnSpan(2),
@@ -103,29 +109,35 @@ class ProductResource extends Resource
                 ->toggleable(),
             TextColumn::make('name')
                 ->label('Nome')
+                ->limit(20)
                 ->searchable()
                 ->sortable()
                 ->toggleable(),
             TextColumn::make('quantity')
-                ->label('Quantidade em Estoque')
+                ->label('Qtd em Estoque')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),
             TextColumn::make('cost_value')
                 ->money('BRL')
-                ->label('Valor de Custo')
+                ->label('Custo')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),
             TextColumn::make('sale_value')
                 ->money('BRL')
-                ->label('Valor de Venda')
+                ->label('Valor Venda')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),
+            TextColumn::make('show_on_catalog')
+                ->label('Mostrar no Catálogo')
+                ->formatStateUsing(function ($state) {
+                    return $state ? 'Sim' : 'Não';
+                }),
             TextColumn::make('created_at')
                 ->label('Criado em')
-                ->dateTime('d M Y \à\s H:i')
+                ->dateTime('d M Y')
                 ->sortable()
                 ->toggleable()
         ])
