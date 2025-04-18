@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\ProductSale;
 use Illuminate\Database\Eloquent\Model;
 
 class Sale extends Model
@@ -9,7 +10,7 @@ class Sale extends Model
     protected $fillable = [
         'customer_id',
         'due_date',
-        'parcels'
+        'total'
     ];
 
     protected $casts = [
@@ -24,8 +25,11 @@ class Sale extends Model
 
     public function products()
     {
-        return $this->belongsToMany(Product::class, 'product_sale')
-            ->withPivot('quantity')
-            ->withTimestamps();
+        return $this->hasMany(ProductSale::class, 'sale_id', 'id');
+    }
+
+    public function installments()
+    {
+        return $this->hasMany(SaleInstallment::class, 'sale_id', 'id');
     }
 }

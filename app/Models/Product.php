@@ -22,13 +22,6 @@ class Product extends Model
         'image' => 'array',
     ];
 
-    public function sales()
-    {
-        return $this->belongsToMany(Sale::class, 'product_sale')
-            ->withPivot('quantity')
-            ->withTimestamps();
-    }
-
     public function category()
     {
         return $this->belongsTo(Category::class);

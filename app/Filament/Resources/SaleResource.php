@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Carbon\Carbon;
 use Filament\Forms;
 use App\Models\Sale;
 use Filament\Tables;
@@ -10,6 +11,7 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Repeater;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
@@ -31,61 +33,155 @@ class SaleResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Select::make('customer_id')
-                ->relationship('customer', 'name')
-                ->searchable()
-                ->required()
-                ->label('Cliente'),
-
-            DatePicker::make('due_date')->label('Data de Vencimento')->required(),
-
-            TextInput::make('parcels')
-                ->label('Número de Parcelas')
-                ->numeric()
-                ->required()
-                ->default(1),
-
-            Repeater::make('products')
-                ->label('Produtos da Venda')
-                ->relationship()
+            Section::make('Produtos da Venda')
                 ->schema([
-                    Select::make('product_id')
-                        ->label('Produto')
-                        ->options(Product::all()->pluck('name', 'id'))
+                    Repeater::make('products')
+                        ->label('Produtos')
+                        ->relationship()
+                        ->schema([
+                            Select::make('product_id')
+                                ->label('Produto')
+                                ->options(Product::all()->pluck('name', 'id'))
+                                ->live()
+                                ->required(),
+                            TextInput::make('quantity')
+                                ->numeric()
+                                ->default(1)
+                                ->live()
+                                ->required()
+                        ])
+                        ->columns(2)
+                        ->required()
+                        ->afterStateUpdated(function (\Filament\Forms\Set $set, \Filament\Forms\Get $get, ?array $state) {
+                            if (!$state) return;
+
+                            $total = 0;
+
+                            foreach ($state as $item) {
+                                if (!isset($item['product_id']) || !isset($item['quantity'])) {
+                                    continue;
+                                }
+
+                                $product = Product::find($item['product_id']);
+                                if (!$product) continue;
+
+                                $total += $product->sale_value * (int) $item['quantity'];
+                            }
+
+                            // Atualiza o total
+                            $set('total', number_format($total, 2, '.', ''));
+
+                            // Atualiza parcelas também
+                            $count = (int) $get('installments_count');
+                            if (!$count || !$total) return;
+
+                            $dueDate = Carbon::now()->addMonth();
+                            $amount = round($total / $count, 2);
+
+                            $installments = [];
+                            for ($i = 0; $i < $count; $i++) {
+                                $installments[] = [
+                                    'installment_number' => $i + 1,
+                                    'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
+                                    'amount' => $amount,
+                                ];
+                            }
+
+                            $set('installments', $installments);
+                        }),
+                ]),
+            Section::make('Dados da Venda')
+                ->schema([
+                    Select::make('customer_id')
+                        ->relationship('customer', 'name')
                         ->searchable()
-                        ->required(),
+                        ->required()
+                        ->label('Cliente'),
 
-                    TextInput::make('quantity')
-                        ->label('Quantidade')
+                    TextInput::make('total')
                         ->numeric()
+                        ->prefix('R$')
+                        ->required()
+                        ->label('Valor Total')
+                        ->readOnly(), // impede edição manual, já que é calculado
+
+                    TextInput::make('installments_count')
+                        ->numeric()
+                        ->minValue(1)
                         ->default(1)
-                        ->required(),
+                        ->label('Número de Parcelas')
+                        ->live()
+                        ->afterStateUpdated(function (\Filament\Forms\Set $set, \Filament\Forms\Get $get, $state) {
+                            if (!$state || !$get('total')) return;
+
+                            $count = (int) $state;
+                            $total = floatval($get('total'));
+                            $dueDate = Carbon::now()->addMonth();
+                            $amount = round($total / $count, 2);
+
+                            $installments = [];
+                            for ($i = 0; $i < $count; $i++) {
+                                $installments[] = [
+                                    'installment_number' => $i + 1,
+                                    'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
+                                    'amount' => $amount,
+                                ];
+                            }
+
+                            $set('installments', $installments);
+                        }),
+                ]),
+
+            Section::make('Dados das Parcelas')
+                ->schema([
+                    Repeater::make('installments')
+                        ->relationship()
+                        ->label('Parcelas')
+                        ->live()
+                        ->schema([
+                            TextInput::make('installment_number')
+                                ->label('Nº')
+                                ->readOnly(),
+
+                            DatePicker::make('due_date')
+                                ->label('Vencimento'),
+
+                            TextInput::make('amount')
+                                ->label('Valor')
+                                ->prefix('R$')
+                                ->numeric(),
+                        ])
+                        ->columns(3)
+
                 ])
-                ->defaultItems(1)
-                ->columns(2)
-                ->collapsible(),
-
-            Placeholder::make('total')
-                ->label('Total da Venda')
-                ->content(function ($record) {
-                    if (! $record) return 'R$ 0,00';
-
-                    $total = 0;
-                    foreach ($record->products as $product) {
-                        $total += $product->pivot->quantity * $product->sale_value;
-                    }
-                    return 'R$ ' . number_format($total, 2, ',', '.');
-                }),
         ]);
     }
+
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('customer.name')->label('Cliente'),
-            TextColumn::make('due_date')->label('Vencimento')->date(),
-            TextColumn::make('parcels')->label('Parcelas'),
-            TextColumn::make('products_count')->counts('products')->label('Itens'),
+            TextColumn::make('customer.name')
+                ->label('Cliente')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('created_at')
+                ->label('Data da Venda')
+                ->sortable()
+                ->searchable()
+                ->date('d M Y'),
+            TextColumn::make('installments.due_date')
+                ->label('Próximo vencimento')
+                ->sortable()
+                ->searchable()
+                ->formatStateUsing(function ($state) {
+                    return $state[0] ? Carbon::parse($state)->format('d M Y') : null;
+                }),
+            TextColumn::make('products_count')
+                ->counts('products')
+                ->label('Itens')
+                ->sortable()
+                ->searchable(),
         ])
             ->filters([
                 //
