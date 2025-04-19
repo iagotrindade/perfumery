@@ -10,6 +10,7 @@ class Sale extends Model
     protected $fillable = [
         'customer_id',
         'due_date',
+        'status',
         'total'
     ];
 

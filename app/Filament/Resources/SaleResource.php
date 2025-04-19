@@ -16,6 +16,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Columns\BadgeColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\Placeholder;
 use App\Filament\Resources\SaleResource\Pages;
@@ -183,6 +184,53 @@ class SaleResource extends Resource
                 ->label('Itens')
                 ->sortable()
                 ->searchable(),
+
+            TextColumn::make('installments_count')
+                ->counts('installments')
+                ->label('Parcelas')
+                ->sortable()
+                ->searchable()
+                ->formatStateUsing(function ($state) {
+                    return $state . 'x';
+                }),
+
+            TextColumn::make('status_geral')
+                ->label('Situação')
+                ->sortable()
+                ->searchable()
+                ->badge()
+                ->color(function ($state) {
+                    return match ($state) {
+                        'Pendente' => 'gray',
+                        'Pago' => 'success',
+                        'Cancelado' => 'danger',
+                        'Atrasado' => 'danger',
+                        default => 'secondary',
+                    };
+                })
+                ->getStateUsing(function ($record) {
+                    $statuses = $record->installments->pluck('status')->toArray();
+
+                    if (in_array('overdue', $statuses)) {
+                        return 'Atrasado';
+                    }
+
+                    if (in_array('canceled', $statuses)) {
+                        return 'Cancelado';
+                    }
+
+                    if (in_array('pending', $statuses)) {
+                        return 'Pendente';
+                    }
+
+                    if (count($statuses) > 0 && count(array_unique($statuses)) === 1 && $statuses[0] === 'paid') {
+                        return 'Pago';
+                    }
+
+                    return 'Desconhecido';
+                }),
+
+
         ])
             ->filters([
                 //
