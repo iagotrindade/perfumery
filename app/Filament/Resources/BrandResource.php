@@ -36,7 +36,7 @@ class BrandResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Informações da Categoria')
+                Section::make('Informações da Marca')
                     ->schema([
                         TextInput::make('name')
                             ->label('Nome')

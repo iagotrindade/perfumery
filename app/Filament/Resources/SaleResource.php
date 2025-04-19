@@ -45,6 +45,7 @@ class SaleResource extends Resource
                                 ->live()
                                 ->required(),
                             TextInput::make('quantity')
+                                ->label('Quantidade')
                                 ->numeric()
                                 ->default(1)
                                 ->live()
@@ -165,18 +166,18 @@ class SaleResource extends Resource
                 ->label('Cliente')
                 ->searchable()
                 ->sortable(),
-            TextColumn::make('created_at')
-                ->label('Data da Venda')
-                ->sortable()
-                ->searchable()
-                ->date('d M Y'),
             TextColumn::make('installments.due_date')
                 ->label('Próximo vencimento')
                 ->sortable()
-                ->searchable()
-                ->formatStateUsing(function ($state) {
-                    return $state[0] ? Carbon::parse($state)->format('d M Y') : null;
+                ->formatStateUsing(function ($state, $record) {
+                    $next = $record->installments
+                        ->where('status', 'pending')
+                        ->sortBy('due_date')
+                        ->first();
+
+                    return $next ? Carbon::parse($next->due_date)->format('d M Y') : 'Sem vencimento';
                 }),
+
             TextColumn::make('products_count')
                 ->counts('products')
                 ->label('Itens')
