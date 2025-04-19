@@ -9,6 +9,10 @@ use Filament\Forms\Form;
 use Illuminate\Database\Eloquent\Model;
 use App\Filament\Resources\SaleResource;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Facades\Auth;
+use Filament\Notifications\Notification;
+use App\Models\User;
+
 
 class CreateSale extends CreateRecord
 {
@@ -16,6 +20,9 @@ class CreateSale extends CreateRecord
 
     protected function afterCreate(): void
     {
+        $authUser = Auth::user();
+        $recipients = User::all();
+        
         //BUsca o último sale criado
         $record = Sale::orderBy('id', 'desc')->first();
 
@@ -27,5 +34,12 @@ class CreateSale extends CreateRecord
                 $product->save();
             }
         }
+
+        Notification::make()
+            ->title('Venda realizada')
+            ->icon('heroicon-o-currency-dollar')
+            ->body($authUser->name . ' criou a venda para o cliente ' . $record->customer->name . '.')
+            ->success()
+            ->sendToDatabase($recipients);
     }
 }

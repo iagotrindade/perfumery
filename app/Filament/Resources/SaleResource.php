@@ -22,6 +22,11 @@ use Filament\Forms\Components\Placeholder;
 use App\Filament\Resources\SaleResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\SaleResource\RelationManagers;
+use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Tables\Actions\DeleteAction;
+use Illuminate\Support\Facades\Auth;
+use Filament\Notifications\Notification;
+use App\Models\User;
 
 class SaleResource extends Resource
 {
@@ -237,6 +242,31 @@ class SaleResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->before(
+                        function ($record) {
+                            // Verificar os produtos vendidos e devolver a quantidade ao estoque
+
+                            foreach ($record->products as $productSale) {
+                                $product = Product::find($productSale->product_id); // Busca o produto relacionado
+                                if ($product) {
+                                    $product->quantity += $productSale->quantity; // Atualiza o estoque
+                                    $product->save();
+                                }
+                            }
+        
+                            // Enviar notificação para todos os usuários
+                            $recipients = User::all();
+                            $authUser = Auth::user();
+        
+                            Notification::make()
+                                ->title('Venda excluída')
+                                ->icon('heroicon-o-currency-dollar')
+                                ->body($authUser->name . ' excluiu a venda para o cliente ' . $record->customer->name . '.')
+                                ->danger()
+                                ->sendToDatabase($recipients);
+                        }
+                )
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
