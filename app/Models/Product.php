@@ -31,4 +31,11 @@ class Product extends Model
     {
         return $this->belongsTo(Brand::class);
     }
+
+    public function sales()
+    {
+        return $this->belongsToMany(Sale::class, 'product_sales')
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
 }
