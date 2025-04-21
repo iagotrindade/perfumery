@@ -2,18 +2,40 @@
 
 namespace App\Filament\Resources\SaleResource\Pages;
 
-use App\Filament\Resources\SaleResource;
-use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
-use App\Models\Product;
-use Illuminate\Support\Facades\Auth;
-use Filament\Notifications\Notification;
 use App\Models\User;
+use Filament\Actions;
+use App\Models\Product;
+use App\Models\ProductSale;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
+use App\Filament\Resources\SaleResource;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 
 
 class EditSale extends EditRecord
 {
     protected static string $resource = SaleResource::class;
+
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        // Atualiza os dados do record
+        $record->update($data);
+
+        // Enviar notificação para todos os usuários
+        $recipients = User::all();
+        $authUser = Auth::user();
+
+        Notification::make()
+            ->title('Venda editada')
+            ->icon('heroicon-o-currency-dollar')
+            ->body($authUser->name . ' editou a venda para o cliente ' . $record->customer->name . '.')
+            ->success()
+            ->sendToDatabase($recipients);
+
+        return $record;
+    }
+
 
     protected function getHeaderActions(): array
     {

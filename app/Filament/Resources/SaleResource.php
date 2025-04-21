@@ -22,10 +22,12 @@ use Filament\Forms\Components\Placeholder;
 use App\Filament\Resources\SaleResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\SaleResource\RelationManagers;
+use App\Models\Customer;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\DeleteAction;
 use Illuminate\Support\Facades\Auth;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\Page;
 use App\Models\User;
 
 class SaleResource extends Resource
@@ -39,108 +41,50 @@ class SaleResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Section::make('Produtos da Venda')
-                ->schema([
-                    Repeater::make('products')
-                        ->label('Produtos')
-                        ->relationship()
-                        ->schema([
-                            Select::make('product_id')
-                                ->label('Produto')
-                                ->options(Product::all()->pluck('name', 'id'))
-                                ->live()
-                                ->required(),
-                            TextInput::make('quantity')
-                                ->label('Quantidade')
-                                ->numeric()
-                                ->default(1)
-                                ->live()
-                                ->required()
-                        ])
-                        ->columns(2)
-                        ->required()
-                        ->afterStateUpdated(function (\Filament\Forms\Set $set, \Filament\Forms\Get $get, ?array $state) {
-                            if (!$state) return;
-
-                            $total = 0;
-
-                            foreach ($state as $item) {
-                                if (!isset($item['product_id']) || !isset($item['quantity'])) {
-                                    continue;
-                                }
-
-                                $product = Product::find($item['product_id']);
-                                if (!$product) continue;
-
-                                $total += $product->sale_value * (int) $item['quantity'];
-                            }
-
-                            // Atualiza o total
-                            $set('total', number_format($total, 2, '.', ''));
-
-                            // Atualiza parcelas também
-                            $count = (int) $get('installments_count');
-                            if (!$count || !$total) return;
-
-                            $dueDate = Carbon::now()->addMonth();
-                            $amount = round($total / $count, 2);
-
-                            $installments = [];
-                            for ($i = 0; $i < $count; $i++) {
-                                $installments[] = [
-                                    'installment_number' => $i + 1,
-                                    'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
-                                    'amount' => $amount,
-                                ];
-                            }
-
-                            $set('installments', $installments);
-                        }),
-                ]),
             Section::make('Dados da Venda')
                 ->schema([
-                    Select::make('customer_id')
-                        ->relationship('customer', 'name')
-                        ->searchable()
-                        ->required()
-                        ->label('Cliente'),
+                    TextInput::make('customer_id')
+                        ->label('Cliente')
+                        ->disabled()
+                        ->readOnly()
+                        ->formatStateUsing(
+                            function ($state) {
+                                $product = Customer::find($state);
+                                return $product ? $product->name : 'Cliente não encontrado';
+                            }
+                        ),
 
                     TextInput::make('total')
                         ->numeric()
                         ->prefix('R$')
-                        ->required()
                         ->label('Valor Total')
+                        ->disabled()
                         ->readOnly(), // impede edição manual, já que é calculado
 
-                    TextInput::make('installments_count')
-                        ->numeric()
-                        ->minValue(1)
-                        ->default(1)
-                        ->label('Número de Parcelas')
-                        ->live()
-                        ->afterStateUpdated(function (\Filament\Forms\Set $set, \Filament\Forms\Get $get, $state) {
-                            if (!$state || !$get('total')) return;
+                    Repeater::make('products')
+                        ->label('Produtos')
+                        ->relationship()
+                        ->schema([
+                            TextInput::make('product_id')
+                                ->label('Produto')
+                                ->readOnly()
+                                ->formatStateUsing(
+                                    function ($state) {
+                                        $product = Product::find($state);
+                                        return $product ? $product->name : 'Produto não encontrado';
+                                    }
+                                ),
+                            TextInput::make('quantity')
+                                ->label('Quantidade')
+                                ->numeric()
+                                ->default(1)
+                                ->readOnly()
+                        ])
+                        ->columns(2)
+                        ->addable(false)
+                        ->deletable(false)
+                        ->disabled(),
 
-                            $count = (int) $state;
-                            $total = floatval($get('total'));
-                            $dueDate = Carbon::now()->addMonth();
-                            $amount = round($total / $count, 2);
-
-                            $installments = [];
-                            for ($i = 0; $i < $count; $i++) {
-                                $installments[] = [
-                                    'installment_number' => $i + 1,
-                                    'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
-                                    'amount' => $amount,
-                                ];
-                            }
-
-                            $set('installments', $installments);
-                        }),
-                ]),
-
-            Section::make('Dados das Parcelas')
-                ->schema([
                     Repeater::make('installments')
                         ->relationship()
                         ->label('Parcelas')
@@ -148,19 +92,34 @@ class SaleResource extends Resource
                         ->schema([
                             TextInput::make('installment_number')
                                 ->label('Nº')
+                                ->disabled()
                                 ->readOnly(),
 
                             DatePicker::make('due_date')
+                                ->disabled()
                                 ->label('Vencimento'),
 
                             TextInput::make('amount')
                                 ->label('Valor')
                                 ->prefix('R$')
-                                ->numeric(),
+                                ->numeric()
+                                ->disabled(),
+                            
+                            Select::make('status')
+                                ->label('Status')
+                                ->options([
+                                    'pending' => 'Pendente',
+                                    'paid' => 'Pago',
+                                    'canceled' => 'Cancelado',
+                                    'overdue' => 'Atrasado',
+                                ])
+                                ->default('pending')
+                                ->required(),
                         ])
-                        ->columns(3)
-
-                ])
+                        ->columns(4)
+                        ->addable(false)
+                        ->deletable(false),
+                ]),
         ]);
     }
 
@@ -184,11 +143,29 @@ class SaleResource extends Resource
                     return $next ? Carbon::parse($next->due_date)->format('d M Y') : 'Sem vencimento';
                 }),
 
-            TextColumn::make('products_count')
-                ->counts('products')
+            TextColumn::make('products')
+                ->formatStateUsing(
+                    function ($state, $record) {
+                        $count = 0;
+                        foreach($record->products as $productSale) {
+                            $count += $productSale->quantity;
+                            
+                        }
+                        return $count;
+                    }
+                )
                 ->label('Itens')
                 ->sortable()
                 ->searchable(),
+
+            TextColumn::make('total')
+                ->label('Valor')
+                ->prefix('R$')
+                ->sortable()
+                ->searchable()
+                ->formatStateUsing(function ($state) {
+                    return number_format($state, 2, ',', '.');
+                }),
 
             TextColumn::make('installments_count')
                 ->counts('installments')
@@ -241,6 +218,7 @@ class SaleResource extends Resource
                 //
             ])
             ->actions([
+                //Mandar o usuário para a página editsalestatus ao inves da edição padrão
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
                     ->before(
@@ -254,11 +232,11 @@ class SaleResource extends Resource
                                     $product->save();
                                 }
                             }
-        
+
                             // Enviar notificação para todos os usuários
                             $recipients = User::all();
                             $authUser = Auth::user();
-        
+
                             Notification::make()
                                 ->title('Venda excluída')
                                 ->icon('heroicon-o-currency-dollar')
@@ -266,7 +244,7 @@ class SaleResource extends Resource
                                 ->danger()
                                 ->sendToDatabase($recipients);
                         }
-                )
+                    )
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

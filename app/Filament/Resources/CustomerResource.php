@@ -132,7 +132,8 @@ class CustomerResource extends Resource
                                     ->required(),
 
                                 Toggle::make('is_primary')
-                                    ->label('Endereço principal'),
+                                    ->label('Endereço principal')
+                                    ->default(true),
                             ])
                             ->columns(3)
                     ])

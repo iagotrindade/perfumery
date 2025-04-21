@@ -45,13 +45,24 @@ class ProductResource extends Resource
                 Section::make()
                     ->schema([
                         FileUpload::make('image')
+                            ->image()
                             ->label('Imagem')
                             ->acceptedFileTypes(['image/jpeg', 'image/jpg'])
                             ->imageEditor()
+                            ->acceptedFileTypes([
+                                'image/jpeg',
+                                'image/jpg',
+                                'image/png',
+                                'image/webp',
+                            ])
                             ->directory('products')
                     ]),
                 Section::make()
                     ->schema([
+                        TextInput::make('id')
+                            ->label('ID')
+                            ->disabled()
+                            ->hidden(),
                         TextInput::make('name')
                             ->label('Nome')
                             ->required(),
@@ -76,6 +87,7 @@ class ProductResource extends Resource
                             ->label('Valor de Custo')
                             ->stripCharacters([','])
                             ->numeric()
+                            ->prefix('R$')
                             ->inputMode('decimal')
                             ->required(),
 
@@ -83,17 +95,20 @@ class ProductResource extends Resource
                             ->label('Valor de Venda')
                             ->stripCharacters([','])
                             ->numeric()
+                            ->prefix('R$')
                             ->inputMode('decimal')
                             ->required(),
+
+
+                        TextArea::make('description')
+                            ->label('Descrição')
+                            ->columnSpan(2),
+
                         Toggle::make('show_on_catalog')
                             ->label('Mostrar no catálogo')
                             ->default(true)
                             ->inline(false)
                             ->required(),
-
-                        TextArea::make('description')
-                            ->label('Descrição')
-                            ->columnSpan(2),
 
                     ])->columns(2),
             ]);
