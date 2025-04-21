@@ -63,6 +63,8 @@ class ProductResource extends Resource
                             ->label('ID')
                             ->disabled()
                             ->hidden(),
+                        TextInput::make('sku')
+                            ->label('Código'),
                         TextInput::make('name')
                             ->label('Nome')
                             ->required(),
@@ -76,12 +78,6 @@ class ProductResource extends Resource
                             ->label('Marca')
                             ->options(Brand::all()->pluck('name', 'id'))
                             ->searchable(),
-
-                        TextInput::make('quantity')
-                            ->label('Quantidade em Estoque')
-                            ->numeric()
-                            ->minValue(0)
-                            ->required(),
 
                         TextInput::make('cost_value')
                             ->label('Valor de Custo')
@@ -99,16 +95,21 @@ class ProductResource extends Resource
                             ->inputMode('decimal')
                             ->required(),
 
-
-                        TextArea::make('description')
-                            ->label('Descrição')
-                            ->columnSpan(2),
+                        TextInput::make('quantity')
+                            ->label('Quantidade em Estoque')
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
 
                         Toggle::make('show_on_catalog')
                             ->label('Mostrar no catálogo')
                             ->default(true)
                             ->inline(false)
                             ->required(),
+
+                        TextArea::make('description')
+                            ->label('Descrição')
+                            ->columnSpan(2),
 
                     ])->columns(2),
             ]);
@@ -122,39 +123,46 @@ class ProductResource extends Resource
                 ->circular()
                 ->size(50)
                 ->toggleable(),
+
             TextColumn::make('name')
                 ->label('Nome')
                 ->limit(20)
                 ->searchable()
                 ->sortable()
                 ->toggleable(),
+
+            TextColumn::make('sku')
+                ->label('Código')
+                ->sortable()
+                ->searchable()
+                ->limit(10)
+                ->toggleable(),
+
             TextColumn::make('quantity')
                 ->label('Qtd em Estoque')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),
+
             TextColumn::make('cost_value')
                 ->money('BRL')
                 ->label('Custo')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),
+
             TextColumn::make('sale_value')
                 ->money('BRL')
                 ->label('Valor Venda')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),
+
             TextColumn::make('show_on_catalog')
                 ->label('Mostrar no Catálogo')
                 ->formatStateUsing(function ($state) {
                     return $state ? 'Sim' : 'Não';
                 }),
-            TextColumn::make('created_at')
-                ->label('Criado em')
-                ->dateTime('d M Y')
-                ->sortable()
-                ->toggleable()
         ])
             ->filters([
                 //
