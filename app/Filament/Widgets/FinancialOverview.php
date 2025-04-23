@@ -13,8 +13,15 @@ class FinancialOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        // Lucro do mês
+        // Total de vendas do mês
         $monthlyProfit = Sale::where('created_at', '>=', now()->startOfMonth())->sum('total');
+
+        // Total gasto com aquisições de produtos no mês
+        $totalMonthlyCost = Product::where('created_at', '>=', now()->startOfMonth())
+            ->sum('cost_value');
+
+        // Cálculo do lucro do mês
+        $monthlyNetProfit = $monthlyProfit - $totalMonthlyCost;
 
         // Lucro de hoje e ontem
         $today = Sale::whereDate('created_at', now())->sum('total');
@@ -34,42 +41,23 @@ class FinancialOverview extends BaseWidget
             return Sale::whereDate('created_at', $date)->sum('total');
         })->toArray();
 
-        $totalMonthlyCost = Product::where('created_at', '>=', now()->startOfMonth())
-            ->sum('cost_value');
-
-        $productsSoldThisMonth = Product::whereHas('sale', function ($query) {
-            $query->where('created_at', '>=', now()->startOfMonth());
-        })->get();
-
-        // Lucro = total vendido - total gasto
-        $totalRevenue = $productsSoldThisMonth->sum(function ($product) {
-            return $product->sale_value * $product->quantity;
-        });
-
-        $totalCost = $productsSoldThisMonth->sum(function ($product) {
-            return $product->cost_value * $product->quantity;
-        });
-
-        $profit = $totalRevenue - $totalCost;
-
         return [
-            Stat::make('Vendas este mês', $monthlyProfit)
+            Stat::make('Lucro do mês', 'R$ ' . number_format($monthlyNetProfit, 2, ',', '.'))
+                ->icon('heroicon-o-chart-bar')
+                ->description('Lucro líquido do mês')
+                ->color($monthlyNetProfit >= 0 ? 'success' : 'danger'),
+
+            Stat::make('Vendas este mês', 'R$ ' . number_format($monthlyProfit, 2, ',', '.'))
                 ->icon('heroicon-o-currency-dollar')
                 ->description('Comparado a ontem')
                 ->descriptionIcon($trendIcon)
                 ->chart($chartData)
                 ->color('success'),
 
-            Stat::make('Custo de aquisições', $totalMonthlyCost)
+            Stat::make('Custo de aquisições', 'R$ ' . number_format($totalMonthlyCost, 2, ',', '.'))
                 ->icon('heroicon-o-banknotes')
                 ->description('Total gasto com aquisições de produtos este mês')
                 ->color('warning'),
-
-            Stat::make('Lucro bruto do mês', $profit)
-                ->icon('heroicon-o-currency-dollar')
-                ->description('Receita - custo dos produtos vendidos')
-                ->descriptionIcon($profit >= 0 ? 'heroicon-o-arrow-trending-up' : 'heroicon-o-arrow-trending-down')
-                ->color($profit >= 0 ? 'success' : 'danger')
         ];
     }
 }
