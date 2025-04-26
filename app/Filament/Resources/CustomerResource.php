@@ -165,7 +165,7 @@ class CustomerResource extends Resource
                     ->toggleable(),
                 TextColumn::make('created_at')
                     ->label('Criado em')
-                    ->dateTime('d M Y \à\s H:i')
+                    ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(),
             ])

@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Auth;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use App\Models\User;
+use Filament\Tables\Columns\Summarizers\Sum;
 
 class SaleResource extends Resource
 {
@@ -104,7 +105,7 @@ class SaleResource extends Resource
                                 ->prefix('R$')
                                 ->numeric()
                                 ->disabled(),
-                            
+
                             Select::make('status')
                                 ->label('Status')
                                 ->options([
@@ -134,7 +135,7 @@ class SaleResource extends Resource
             TextColumn::make('installments.due_date')
                 ->label('Próximo vencimento')
                 ->sortable()
-                ->formatStateUsing(function ($state, $record) {
+                ->formatStateUsing(function ($record) {
                     $next = $record->installments
                         ->where('status', 'pending')
                         ->sortBy('due_date')
@@ -147,9 +148,8 @@ class SaleResource extends Resource
                 ->formatStateUsing(
                     function ($state, $record) {
                         $count = 0;
-                        foreach($record->products as $productSale) {
+                        foreach ($record->products as $productSale) {
                             $count += $productSale->quantity;
-                            
                         }
                         return $count;
                     }
@@ -165,7 +165,12 @@ class SaleResource extends Resource
                 ->searchable()
                 ->formatStateUsing(function ($state) {
                     return number_format($state, 2, ',', '.');
-                }),
+                })
+                ->summarize(
+                    Sum::make()
+                        ->money('BRL')
+                        ->label('Total')
+                ),
 
             TextColumn::make('installments_count')
                 ->counts('installments')
@@ -211,11 +216,40 @@ class SaleResource extends Resource
 
                     return 'Desconhecido';
                 }),
-
-
         ])
             ->filters([
-                //
+                Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        Forms\Components\DatePicker::make('created_from')->label('De'),
+                        Forms\Components\DatePicker::make('created_until')->label('Até'),
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        return $query
+                            ->when($data['created_from'], fn($query) => $query->whereDate('created_at', '>=', $data['created_from']))
+                            ->when($data['created_until'], fn($query) => $query->whereDate('created_at', '<=', $data['created_until']));
+                    })
+                    ->label('Data de Criação'),
+
+                // Filtro de Status através das parcelas (installments)
+                Tables\Filters\Filter::make('status_geral')
+                    ->form([
+                        Forms\Components\Select::make('status')
+                            ->label('Situação')
+                            ->options([
+                                'pending' => 'Pendente',
+                                'paid' => 'Pago',
+                                'overdue' => 'Atrasado',
+                                'canceled' => 'Cancelado',
+                            ]),
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        if (!empty($data['status'])) {
+                            $query->whereHas('installments', function (Builder $subQuery) use ($data) {
+                                $subQuery->where('status', $data['status']);
+                            });
+                        }
+                    })
+                    ->label('Situação')
             ])
             ->actions([
                 //Mandar o usuário para a página editsalestatus ao inves da edição padrão

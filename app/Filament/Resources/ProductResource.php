@@ -71,12 +71,14 @@ class ProductResource extends Resource
 
                         Select::make('category_id')
                             ->label('Categoria')
+                            ->required()
                             ->options(Category::all()->pluck('name', 'id'))
                             ->searchable(),
 
                         Select::make('brand_id')
                             ->label('Marca')
                             ->relationship('brand', 'name')
+                            ->required()
                             ->options(Brand::all()->pluck('name', 'id'))
                             ->searchable(),
 
@@ -140,7 +142,7 @@ class ProductResource extends Resource
                 ->toggleable(),
 
             TextColumn::make('quantity')
-                ->label('Qtd em Estoque')
+                ->label('Estoque')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),
@@ -154,7 +156,7 @@ class ProductResource extends Resource
 
             TextColumn::make('sale_value')
                 ->money('BRL')
-                ->label('Valor Venda')
+                ->label('Venda')
                 ->sortable()
                 ->searchable()
                 ->toggleable(),

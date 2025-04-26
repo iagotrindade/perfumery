@@ -23,7 +23,7 @@ class ListCustomers extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
-           CustomerResource\Widgets\CustomerOverview::class,
+            CustomerResource\Widgets\CustomerOverview::class,
         ];
     }
 
@@ -46,6 +46,12 @@ class ListCustomers extends ListRecords
                 ->modifyQueryUsing(fn(Builder $query) => $query->whereDoesntHave('sales', function ($query) use ($oneMonthAgo) {
                     $query->where('created_at', '>=', $oneMonthAgo);
                 })),
+
+            'Melhores clientes' => Tab::make('Melhores clientes')
+                ->modifyQueryUsing(function (Builder $query) {
+                    $query->withCount('sales')
+                        ->orderByDesc('sales_count');
+                })
         ];
     }
 }

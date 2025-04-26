@@ -6,6 +6,7 @@ use Filament\Tables;
 use App\Models\Customer;
 use Filament\Widgets\TableWidget;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Carbon;
 
 
 class CustomerSales extends TableWidget
@@ -32,24 +33,66 @@ class CustomerSales extends TableWidget
                     // Acessa o cliente relacionado à venda
                     return $record->customer->name;
                 }),
-            TextColumn::make('due_date')
-                ->label('Data de Vencimento')
-                ->date('d/m/Y'),
             TextColumn::make('created_at')
                 ->label('Data da Venda')
-                ->date(),
-            TextColumn::make('parcels')
-                ->label('Parcelas')
-                ->formatStateUsing(fn($state) => $state . 'x'),
-            TextColumn::make('products.name')
-                ->label('Produtos')
+                ->dateTime('d/m/Y'),
+            TextColumn::make('installments.due_date')
+                ->label('Próximo vencimento')
+                ->sortable()
                 ->formatStateUsing(function ($record) {
-                    // Acessa os produtos relacionados à venda
-                    return $record->products->map(function ($product) {
-                        return $product->name . ' (' . $product->pivot->quantity . 'x)';
-                    })->join(', ');
+                    $next = $record->installments
+                        ->where('status', 'pending')
+                        ->sortBy('due_date')
+                        ->first();
+
+                    return $next ? Carbon::parse($next->due_date)->format('d M Y') : 'Sem vencimento';
+                }),
+            TextColumn::make('installments')
+                ->label('Parcelas')
+                ->formatStateUsing(function ($record) {
+                    return $record->installments->count() . 'x';
+                }),
+
+            TextColumn::make('total')
+                ->label('Valor')
+                ->prefix('R$')
+                ->formatStateUsing(function ($state) {
+                    return number_format($state, 2, ',', '.');
+                }),
+            
+            TextColumn::make('status_geral')
+                ->label('Situação')
+                ->badge()
+                ->color(function ($state) {
+                    return match ($state) {
+                        'Pendente' => 'gray',
+                        'Pago' => 'success',
+                        'Cancelado' => 'danger',
+                        'Atrasado' => 'danger',
+                        default => 'secondary',
+                    };
                 })
-                ->limit(40),
+                ->getStateUsing(function ($record) {
+                    $statuses = $record->installments->pluck('status')->toArray();
+
+                    if (in_array('overdue', $statuses)) {
+                        return 'Atrasado';
+                    }
+
+                    if (in_array('canceled', $statuses)) {
+                        return 'Cancelado';
+                    }
+
+                    if (in_array('pending', $statuses)) {
+                        return 'Pendente';
+                    }
+
+                    if (count($statuses) > 0 && count(array_unique($statuses)) === 1 && $statuses[0] === 'paid') {
+                        return 'Pago';
+                    }
+
+                    return 'Desconhecido';
+                })
         ];
     }
 }
