@@ -76,6 +76,7 @@ class ProductResource extends Resource
 
                         Select::make('brand_id')
                             ->label('Marca')
+                            ->relationship('brand', 'name')
                             ->options(Brand::all()->pluck('name', 'id'))
                             ->searchable(),
 
