@@ -11,6 +11,7 @@ use Filament\Forms\Form;
 use Filament\Support\RawJs;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Repeater;
 use Filament\Tables\Columns\TextColumn;
@@ -54,6 +55,7 @@ class CreateSale extends CreateRecord
                         ->relationship()
                         ->schema([
                             Select::make('product_id')
+                                ->searchable()
                                 ->label('Produto')
                                 ->options(Product::all()->pluck('name', 'id'))
                                 ->live()
@@ -157,7 +159,10 @@ class CreateSale extends CreateRecord
                                 ->numeric(),
                         ])
                         ->addable(false)
-                        ->columns(3)
+                        ->columns(3),
+                    TextArea::make('description')
+                        ->label('Observações')
+                        ->placeholder('Observações sobre a venda')
                 ]),
             Step::make('Resumo')
                 ->description('Confira os dados da venda')

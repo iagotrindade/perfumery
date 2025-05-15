@@ -48,6 +48,10 @@ class CustomerResource extends Resource
                             ->label('Nome')
                             ->required(),
 
+                        TextInput::make('cpf')
+                            ->label('CPF')
+                            ->required(),
+
                         TextInput::make('email')
                             ->label('Email')
                             ->email()
@@ -58,8 +62,8 @@ class CustomerResource extends Resource
 
                         Textarea::make('description')
                             ->label('Descrição')
-                            ->columnSpan(3)
-                    ])->columns(3),
+                            ->columnSpan(2)
+                    ])->columns(2),
 
                 Section::make('Informações de Endereço')
                     ->schema([
@@ -146,6 +150,11 @@ class CustomerResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label('Nome')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('cpf')
+                    ->label('CPF')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),

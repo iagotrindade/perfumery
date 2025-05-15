@@ -18,7 +18,10 @@ class FinancialOverview extends BaseWidget
 
         // Total gasto com aquisições de produtos no mês
         $totalMonthlyCost = Product::where('created_at', '>=', now()->startOfMonth())
-            ->sum('cost_value');
+            ->get()
+            ->sum(function ($product) {
+                return $product->cost_value * $product->quantity;
+            });
 
         // Cálculo do lucro do mês
         $monthlyNetProfit = $monthlyProfit - $totalMonthlyCost;

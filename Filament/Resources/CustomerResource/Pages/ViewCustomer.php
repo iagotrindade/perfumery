@@ -56,6 +56,7 @@ class ViewCustomer extends ViewRecord implements HasTable
                     Grid::make(2)
                         ->schema([
                             TextEntry::make('name')->label('Nome'),
+                            TextEntry::make('cpf')->label('CPF'),
                             TextEntry::make('email')->label('Email')->default('Não informado'),
                             TextEntry::make('phone')->label('Telefone'),
                             TextEntry::make('description')->label('Descrição'),

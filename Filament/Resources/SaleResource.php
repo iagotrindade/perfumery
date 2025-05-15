@@ -11,6 +11,7 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Repeater;
 use Filament\Tables\Columns\TextColumn;
@@ -44,16 +45,21 @@ class SaleResource extends Resource
         return $form->schema([
             Section::make('Dados da Venda')
                 ->schema([
-                    TextInput::make('customer_id')
+                    TextInput::make('customer_name')
                         ->label('Cliente')
                         ->disabled()
                         ->readOnly()
-                        ->formatStateUsing(
-                            function ($state) {
-                                $product = Customer::find($state);
-                                return $product ? $product->name : 'Cliente não encontrado';
-                            }
-                        ),
+                        ->formatStateUsing(function ($record) {
+                            return $record->customer->name ?? 'Cliente não encontrado';
+                        }),
+
+                    TextInput::make('customer_cpf')
+                        ->label('CPF')
+                        ->disabled()
+                        ->readOnly()
+                        ->formatStateUsing(function ($record) {
+                            return $record->customer->cpf ?? 'CPF não encontrado';
+                        }),
 
                     TextInput::make('total')
                         ->numeric()
@@ -79,7 +85,7 @@ class SaleResource extends Resource
                                 ->label('Quantidade')
                                 ->numeric()
                                 ->default(1)
-                                ->readOnly()
+                                ->readOnly(),
                         ])
                         ->columns(2)
                         ->addable(false)
@@ -120,6 +126,10 @@ class SaleResource extends Resource
                         ->columns(4)
                         ->addable(false)
                         ->deletable(false),
+
+                    TextArea::make('description')
+                        ->label('Observações')
+                        ->placeholder('Observações sobre a venda')
                 ]),
         ]);
     }
@@ -155,8 +165,7 @@ class SaleResource extends Resource
                     }
                 )
                 ->label('Itens')
-                ->sortable()
-                ->searchable(),
+                ->sortable(),
 
             TextColumn::make('total')
                 ->label('Valor')
@@ -176,7 +185,6 @@ class SaleResource extends Resource
                 ->counts('installments')
                 ->label('Parcelas')
                 ->sortable()
-                ->searchable()
                 ->formatStateUsing(function ($state) {
                     return $state . 'x';
                 }),
@@ -184,7 +192,6 @@ class SaleResource extends Resource
             TextColumn::make('status_geral')
                 ->label('Situação')
                 ->sortable()
-                ->searchable()
                 ->badge()
                 ->color(function ($state) {
                     return match ($state) {
@@ -215,6 +222,14 @@ class SaleResource extends Resource
                     }
 
                     return 'Desconhecido';
+                }),
+
+            TextColumn::make('description')
+                ->label('Observações')
+                ->searchable()
+                ->limit(40)
+                ->formatStateUsing(function ($state) {
+                    return $state ? $state : 'Sem observações';
                 }),
         ])
             ->filters([

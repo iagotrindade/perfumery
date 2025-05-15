@@ -11,7 +11,8 @@ class Sale extends Model
         'customer_id',
         'due_date',
         'status',
-        'total'
+        'total',
+        'description',
     ];
 
     protected $casts = [
