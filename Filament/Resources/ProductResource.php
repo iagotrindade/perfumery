@@ -64,7 +64,8 @@ class ProductResource extends Resource
                             ->disabled()
                             ->hidden(),
                         TextInput::make('sku')
-                            ->label('Código'),
+                            ->label('Código')
+                            ->required(),
                         TextInput::make('name')
                             ->label('Nome')
                             ->required(),
