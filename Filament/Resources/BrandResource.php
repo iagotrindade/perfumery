@@ -69,15 +69,13 @@ class BrandResource extends Resource
                 TextColumn::make('products_count')
                     ->label('Produtos')
                     ->counts('products')
-                    ->sortable()
-                    ->searchable(),
+                    ->sortable(),
                 TextColumn::make('show_on_catalog')
                     ->label('Mostrar no catálogo')
                     ->formatStateUsing(function ($state) {
                         return $state ? 'Sim' : 'Não';
                     })
-                    ->sortable()
-                    ->searchable(),
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime('d M Y \à\s H:i')

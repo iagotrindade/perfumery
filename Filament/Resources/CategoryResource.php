@@ -64,8 +64,7 @@ class CategoryResource extends Resource
                 TextColumn::make('products_count')
                     ->label('Produtos')
                     ->counts('products')
-                    ->sortable()
-                    ->searchable(),
+                    ->sortable(),
 
                 TextColumn::make('created_at')
                     ->label('Criado em')
