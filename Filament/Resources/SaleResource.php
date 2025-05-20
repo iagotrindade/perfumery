@@ -144,7 +144,6 @@ class SaleResource extends Resource
                 ->sortable(),
             TextColumn::make('installments.due_date')
                 ->label('Próximo vencimento')
-                ->sortable()
                 ->formatStateUsing(function ($record) {
                     $next = $record->installments
                         ->where('status', 'pending')
@@ -170,7 +169,6 @@ class SaleResource extends Resource
             TextColumn::make('total')
                 ->label('Valor')
                 ->prefix('R$')
-                ->sortable()
                 ->searchable()
                 ->formatStateUsing(function ($state) {
                     return number_format($state, 2, ',', '.');
@@ -191,7 +189,6 @@ class SaleResource extends Resource
 
             TextColumn::make('status_geral')
                 ->label('Situação')
-                ->sortable()
                 ->badge()
                 ->color(function ($state) {
                     return match ($state) {
