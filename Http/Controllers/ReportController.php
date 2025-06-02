@@ -39,6 +39,11 @@ class ReportController extends Controller
         $productsData = $sales->pluck('products')->flatten();
         $productsQuantity = $productsData->sum('quantity');
 
+        // Calcular lucro total
+        $totalProfit = $productsData->sum(function ($p) {
+            return ($p->product->sale_value - $p->product->cost_value) * $p->quantity;
+        });
+
         $groupedProducts = $productsData->groupBy('product_id')->map(function ($products) {
             $first = $products->first();
             return [
@@ -86,6 +91,7 @@ class ReportController extends Controller
             'days_in_period' => $daysInPeriod,
             'sales_efficiency' => $salesByDay->count() > 0 ? ($salesByDay->count() / $daysInPeriod) * 100 : 0,
             'avg_ticket' => $hasSales ? $totalSalesValue / $salesCount : 0,
+            'profit_margin_percentage' => $totalSalesValue > 0 ? ($totalProfit / $totalSalesValue) * 100 : 0,
             'top_product' => $groupedProducts->isNotEmpty()
                 ? $groupedProducts->sortByDesc('total_quantity')->first()
                 : null
@@ -101,7 +107,8 @@ class ReportController extends Controller
             ] : ['date' => 'N/A', 'revenue' => 0],
             'total_sales' => $totalSalesValue,
             'total_orders' => $salesCount,
-            'total_products' => $productsQuantity
+            'total_products' => $productsQuantity,
+            'profit_margin' => $totalProfit,
         ];
 
         return PDF::loadView('reports.sales', [
@@ -164,7 +171,7 @@ class ReportController extends Controller
             ->orderByDesc('total_revenue')
             ->first();
     }
-    
+
     public function generateCustomersReport()
     {
         // Obter todos os clientes ou filtrar conforme necessário
