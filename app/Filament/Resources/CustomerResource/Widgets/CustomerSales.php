@@ -6,6 +6,8 @@ use Filament\Tables;
 use App\Models\Customer;
 use Filament\Widgets\TableWidget;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Contracts\View\View;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
 
 
@@ -22,6 +24,16 @@ class CustomerSales extends TableWidget
         return $this->record->sales()->with('products')->getQuery();
     }
 
+    protected function getTableHeaderActions(): array
+    {
+        return [
+            Tables\Actions\Action::make('Extrato de vendas')
+                ->url(fn() => route('report.customer.extract', $this->record->id))
+                ->icon('heroicon-o-arrow-down-tray')
+                ->openUrlInNewTab(),
+        ];
+    }
+
     protected function getTableColumns(): array
     {
         return [
@@ -29,10 +41,7 @@ class CustomerSales extends TableWidget
                 ->label('ID'),
             TextColumn::make('customer.name')
                 ->label('Cliente')
-                ->formatStateUsing(function ($record) {
-                    // Acessa o cliente relacionado à venda
-                    return $record->customer->name;
-                }),
+                ->formatStateUsing(fn($record) => $record->customer->name),
             TextColumn::make('created_at')
                 ->label('Data da Venda')
                 ->dateTime('d/m/Y'),
@@ -49,28 +58,20 @@ class CustomerSales extends TableWidget
                 }),
             TextColumn::make('installments')
                 ->label('Parcelas')
-                ->formatStateUsing(function ($record) {
-                    return $record->installments->count() . 'x';
-                }),
-
+                ->formatStateUsing(fn($record) => $record->installments->count() . 'x'),
             TextColumn::make('total')
                 ->label('Valor')
                 ->prefix('R$')
-                ->formatStateUsing(function ($state) {
-                    return number_format($state, 2, ',', '.');
-                }),
-            
+                ->formatStateUsing(fn($state) => number_format($state, 2, ',', '.')),
             TextColumn::make('status_geral')
                 ->label('Situação')
                 ->badge()
-                ->color(function ($state) {
-                    return match ($state) {
-                        'Pendente' => 'gray',
-                        'Pago' => 'success',
-                        'Cancelado' => 'danger',
-                        'Atrasado' => 'danger',
-                        default => 'secondary',
-                    };
+                ->color(fn($state) => match ($state) {
+                    'Pendente' => 'gray',
+                    'Pago' => 'success',
+                    'Cancelado' => 'danger',
+                    'Atrasado' => 'danger',
+                    default => 'secondary',
                 })
                 ->getStateUsing(function ($record) {
                     $statuses = $record->installments->pluck('status')->toArray();
@@ -92,7 +93,13 @@ class CustomerSales extends TableWidget
                     }
 
                     return 'Desconhecido';
-                })
+                }),
+            Tables\Columns\TextColumn::make('Visualizar')
+                ->icon('heroicon-m-eye')
+                ->url(fn($record) => route('filament.admin.resources.sales.edit', ['record' => $record->id]))
+                ->tooltip('Editar venda')
+                ->default('Visualizar')
+                ->openUrlInNewTab(false),
         ];
     }
 }

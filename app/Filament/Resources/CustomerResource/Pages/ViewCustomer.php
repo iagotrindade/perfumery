@@ -32,7 +32,9 @@ class ViewCustomer extends ViewRecord implements HasTable
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            
+        ];
     }
 
     protected function getTableQuery()

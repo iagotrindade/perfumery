@@ -40,6 +40,7 @@ class BrandResource extends Resource
                     ->schema([
                         TextInput::make('name')
                             ->label('Nome')
+                            ->prefixIcon('heroicon-m-rectangle-stack')
                             ->required(),
                         Textarea::make('description')
                             ->label('Descrição'),

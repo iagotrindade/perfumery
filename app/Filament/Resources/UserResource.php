@@ -36,19 +36,24 @@ class UserResource extends Resource
                     ->schema([
                         TextInput::make('name')
                             ->label('Nome')
+                            ->prefixIcon('heroicon-m-user-circle')
                             ->required(),
 
                         TextInput::make('email')
                             ->label('Email')
+                            ->prefixIcon('heroicon-m-envelope')
                             ->email()
                             ->required(),
+
                         TextInput::make('phone')
                             ->label('Telefone')
+                            ->prefixIcon('heroicon-m-device-phone-mobile')
                             ->tel()
                             ->dehydrated(fn($state) => !empty($state)),
 
                         TextInput::make('password')
                             ->label('Senha')
+                            ->prefixIcon('heroicon-m-key')
                             ->password()
                             ->required()
                             ->dehydrated(fn($state) => !empty($state))

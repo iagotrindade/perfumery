@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use Carbon\Carbon;
 use Filament\Forms;
 use App\Models\User;
 use Filament\Tables;
@@ -42,27 +43,39 @@ class CustomerResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Informações pessoais e de Contato')
+                Section::make('Informações pessoais, Vendas e de Contato')
                     ->schema([
                         TextInput::make('name')
                             ->label('Nome')
+                            ->prefixIcon('heroicon-m-user-circle')
                             ->required(),
 
                         TextInput::make('cpf')
                             ->label('CPF')
+                            ->prefixIcon('heroicon-m-identification')
                             ->required(),
 
                         TextInput::make('email')
                             ->label('Email')
                             ->email()
+                            ->prefixIcon('heroicon-m-envelope')
                             ->required(),
+
                         TextInput::make('phone')
                             ->label('Telefone')
+                            ->prefixIcon('heroicon-m-device-phone-mobile')
                             ->required(),
 
                         Textarea::make('description')
                             ->label('Descrição')
-                            ->columnSpan(2)
+                            ->columnSpan(2),
+
+                        TextInput::make('sale_limit')
+                            ->label('Valor máximo de compras')
+                            ->prefixIcon('heroicon-m-currency-dollar')
+                            ->numeric()
+                            ->helperText('Valor máximo em compras que o cliente pode gastar.')
+                            ->columnSpan(2),
                     ])->columns(2),
 
                 Section::make('Informações de Endereço')
@@ -73,6 +86,7 @@ class CustomerResource extends Resource
                             ->schema([
                                 Select::make('label')
                                     ->label('Tipo')
+                                    ->prefixIcon('heroicon-m-home')
                                     ->options([
                                         'residential' => 'Residencial',
                                         'commercial' => 'Comercial',
@@ -84,6 +98,7 @@ class CustomerResource extends Resource
 
                                 TextInput::make('postal_code')
                                     ->label('CEP')
+                                    ->prefixIcon('heroicon-m-map-pin')
                                     ->placeholder('00000-000')
                                     ->required()
                                     ->live()
@@ -108,30 +123,37 @@ class CustomerResource extends Resource
 
                                 TextInput::make('street')
                                     ->label('Rua')
+                                    ->prefixIcon('heroicon-m-arrows-right-left')
                                     ->required(),
 
                                 TextInput::make('number')
                                     ->label('Número')
+                                    ->prefixIcon('heroicon-m-numbered-list')
                                     ->required(),
 
                                 TextInput::make('complement')
+                                    ->prefixIcon('heroicon-m-chat-bubble-bottom-center-text')
                                     ->label('Complemento'),
 
                                 TextInput::make('neighborhood')
                                     ->label('Bairro')
+                                    ->prefixIcon('heroicon-m-rectangle-group')
                                     ->required(),
 
                                 TextInput::make('city')
                                     ->label('Cidade')
+                                    ->prefixIcon('heroicon-m-map')
                                     ->required(),
 
                                 TextInput::make('state')
                                     ->label('Estado')
+                                    ->prefixIcon('heroicon-m-flag')
                                     ->default('RS')
                                     ->required(),
 
                                 TextInput::make('country')
                                     ->label('País')
+                                    ->prefixIcon('heroicon-m-globe-americas')
                                     ->default('Brasil')
                                     ->required(),
 
@@ -168,15 +190,9 @@ class CustomerResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
-                TextColumn::make('sales_count')->counts('sales')
-                    ->label('Compras')
-                    ->sortable()
-                    ->toggleable(),
-                TextColumn::make('created_at')
-                    ->label('Criado em')
-                    ->dateTime('d M Y')
-                    ->sortable()
-                    ->toggleable(),
+                TextColumn::make('sale_limit')
+                    ->label('Limite de compras')
+                    ->money('BRL', true),
             ])
             ->filters([
                 Filter::make('data')

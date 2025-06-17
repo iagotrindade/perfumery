@@ -39,6 +39,7 @@ class CategoryResource extends Resource
                     ->schema([
                         TextInput::make('name')
                             ->label('Nome')
+                            ->prefixIcon('heroicon-m-tag')
                             ->required(),
                         Textarea::make('description')
                             ->label('Descrição')

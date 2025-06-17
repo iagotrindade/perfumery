@@ -12,6 +12,8 @@ class Sale extends Model
         'due_date',
         'status',
         'total',
+        'discount',
+        'raw_total',
         'description',
     ];
 
@@ -33,5 +35,12 @@ class Sale extends Model
     public function installments()
     {
         return $this->hasMany(SaleInstallment::class, 'sale_id', 'id');
+    }
+
+    public function getAmountDueAttribute()
+    {
+        return $this->installments()
+            ->whereIn('status', ['pending', 'overdue'])
+            ->sum('amount');
     }
 }

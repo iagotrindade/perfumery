@@ -65,19 +65,23 @@ class ProductResource extends Resource
                             ->hidden(),
                         TextInput::make('sku')
                             ->label('Código')
+                            ->prefixIcon('heroicon-m-qr-code')
                             ->required(),
                         TextInput::make('name')
                             ->label('Nome')
+                            ->prefixIcon('heroicon-m-squares-plus')
                             ->required(),
 
                         Select::make('category_id')
                             ->label('Categoria')
+                            
                             ->required()
                             ->options(Category::all()->pluck('name', 'id'))
                             ->searchable(),
 
                         Select::make('brand_id')
                             ->label('Marca')
+                            ->prefixIcon('heroicon-m-rectangle-stack')
                             ->relationship('brand', 'name')
                             ->required()
                             ->options(Brand::all()->pluck('name', 'id'))
@@ -101,6 +105,7 @@ class ProductResource extends Resource
 
                         TextInput::make('quantity')
                             ->label('Quantidade em Estoque')
+                            ->prefixIcon('heroicon-m-percent-badge')
                             ->numeric()
                             ->minValue(0)
                             ->required(),

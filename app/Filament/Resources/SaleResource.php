@@ -47,6 +47,7 @@ class SaleResource extends Resource
                 ->schema([
                     TextInput::make('customer_name')
                         ->label('Cliente')
+                        ->prefixIcon('heroicon-m-user-circle')
                         ->disabled()
                         ->readOnly()
                         ->formatStateUsing(function ($record) {
@@ -55,18 +56,58 @@ class SaleResource extends Resource
 
                     TextInput::make('customer_cpf')
                         ->label('CPF')
+                        ->prefixIcon('heroicon-m-identification')
                         ->disabled()
                         ->readOnly()
                         ->formatStateUsing(function ($record) {
                             return $record->customer->cpf ?? 'CPF não encontrado';
                         }),
 
+                    DatePicker::make('created_at')
+                        ->label('Data da Venda')
+                        ->prefixIcon('heroicon-m-calendar')
+                        ->disabled()
+                        ->readOnly()
+                        ->columns(1)
+                        ->default(Carbon::now()),
+
+                    DatePicker::make('paid_at')
+                        ->label('Último pagamento')
+                        ->prefixIcon('heroicon-m-calendar')
+                        ->disabled()
+                        ->readOnly()
+                        ->columns(1)
+                        ->formatStateUsing(function ($record) {
+                            // Filtra parcelas pagas e pega a última pela data de pagamento
+                            $lastInstallment = $record->installments
+                                ->filter(fn($i) => !is_null($i->payment_date))
+                                ->sortByDesc('payment_date')
+                                ->first();
+
+                            return $lastInstallment?->payment_date;
+                        }),
+
+                    TextInput::make('raw_total')
+                        ->numeric()
+                        ->prefix('R$')
+                        ->label('Valor Bruto (Sem desconto)')
+                        ->disabled()
+                        ->readOnly(), // impede edição manual, já que é calculado
+
+                    TextInput::make('discount')
+                        ->numeric()
+                        ->prefix('R$')
+                        ->label('Desconto')
+                        ->disabled()
+                        ->readOnly(),
+
                     TextInput::make('total')
                         ->numeric()
                         ->prefix('R$')
                         ->label('Valor Total')
                         ->disabled()
-                        ->readOnly(), // impede edição manual, já que é calculado
+                        ->readOnly()
+                        ->columnSpan(2),
 
                     Repeater::make('products')
                         ->label('Produtos')
@@ -74,6 +115,7 @@ class SaleResource extends Resource
                         ->schema([
                             TextInput::make('product_id')
                                 ->label('Produto')
+                                ->prefixIcon('heroicon-m-squares-plus')
                                 ->readOnly()
                                 ->formatStateUsing(
                                     function ($state) {
@@ -83,6 +125,7 @@ class SaleResource extends Resource
                                 ),
                             TextInput::make('quantity')
                                 ->label('Quantidade')
+                                ->prefixIcon('heroicon-m-percent-badge')
                                 ->numeric()
                                 ->default(1)
                                 ->readOnly(),
@@ -90,7 +133,8 @@ class SaleResource extends Resource
                         ->columns(2)
                         ->addable(false)
                         ->deletable(false)
-                        ->disabled(),
+                        ->disabled()
+                        ->columnSpan(2),
 
                     Repeater::make('installments')
                         ->relationship()
@@ -99,11 +143,13 @@ class SaleResource extends Resource
                         ->schema([
                             TextInput::make('installment_number')
                                 ->label('Nº')
+                                ->prefixIcon('heroicon-m-numbered-list')
                                 ->disabled()
                                 ->readOnly(),
 
                             DatePicker::make('due_date')
                                 ->disabled()
+                                ->prefixIcon('heroicon-m-calendar-days')
                                 ->label('Vencimento'),
 
                             TextInput::make('amount')
@@ -114,6 +160,7 @@ class SaleResource extends Resource
 
                             Select::make('status')
                                 ->label('Status')
+                                ->prefixIcon('heroicon-m-arrow-path')
                                 ->options([
                                     'pending' => 'Pendente',
                                     'paid' => 'Pago',
@@ -125,12 +172,23 @@ class SaleResource extends Resource
                         ])
                         ->columns(4)
                         ->addable(false)
-                        ->deletable(false),
+                        ->deletable(false)
+                        ->columnSpan(2),
+
+                    TextInput::make('partial_payment')
+                        ->label('Pagamento parcial')
+                        ->prefix('R$')
+                        ->numeric()
+                        ->placeholder('Valor pago')
+                        ->helperText('O valor será diluído nas parcelas em aberto')
+                        ->columnSpan(2),
 
                     TextArea::make('description')
                         ->label('Observações')
                         ->placeholder('Observações sobre a venda')
-                ]),
+                        ->columnSpan(2)
+                ])
+                ->columns(2),
         ]);
     }
 
@@ -221,10 +279,11 @@ class SaleResource extends Resource
                     return 'Desconhecido';
                 }),
 
+
             TextColumn::make('description')
                 ->label('Observações')
                 ->searchable()
-                ->limit(40)
+                ->limit(20)
                 ->formatStateUsing(function ($state) {
                     return $state ? $state : 'Sem observações';
                 }),

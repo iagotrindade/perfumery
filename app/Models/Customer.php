@@ -12,7 +12,8 @@ class Customer extends Model
         'cpf',
         'email',
         'phone',
-        'description'
+        'description',
+        'sale_limit',
     ];
 
     public function addresses()

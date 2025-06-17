@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use App\Models\Sale;
 use App\Models\Brand;
 use App\Models\Customer;
@@ -198,7 +199,118 @@ class ReportController extends Controller
             'customers' => $customers,
             'stats' => $stats,
             'reportDate' => now()->format('d/m/Y H:i')
-        ])
-            ->stream('Relatório de Clientes.pdf');
+        ])->stream('Relatório de Clientes.pdf');
+    }
+
+    public function generateSaleExtractReport(Request $request)
+    {
+        $sale = Sale::with('installments')->find($request->id);
+
+
+        // Verificar se a venda possuí parcelas com status pending ou overdue e adicionar a informação em sale
+        $sale->hasPendingOrOverdueInstallments = $sale->installments
+            ->whereIn('status', ['pending', 'overdue'])
+            ->count() > 0;
+
+        // Verificar se possuí mais de uma parcela ou se é apenas 1 se for apenas uma colocar a forma de pagamento como a vista se não a prazo
+        if ($sale->installments->count() > 1) {
+            $sale->payment_method = 'A Prazo';
+        } else {
+            $sale->payment_method = 'A Vista';
+        }
+
+        // Trata o status das parcelas retornando um nome legível para cada status
+        $sale->installments->each(function ($installment) {
+            switch ($installment->status) {
+                case 'pending':
+                    $installment->status = 'Pendente';
+                    break;
+                case 'overdue':
+                    $installment->status = 'Vencida';
+                    break;
+                case 'paid':
+                    $installment->status = 'Pago';
+                    break;
+            }
+        });
+
+        // Verificar quanto o cliente ainda deve
+        $sale->debt = $sale->installments()
+            ->whereIn('status', ['pending', 'overdue'])
+            ->sum('amount');
+
+        $sale->paid = $sale->installments()
+            ->where('status', 'paid')
+            ->sum('amount');
+
+        return PDF::loadView('reports.extract', [
+            'sale' => $sale,
+            'reportDate' => now()->format('d/m/Y H:i')
+        ])->stream('Extrato ' . $sale->customer->name . '.pdf');
+    }
+
+    public function generateCustomerExtractReport(Request $request)
+    {
+        $sales = Sale::with(['installments', 'products.product', 'customer'])
+            ->where('customer_id', $request->id)
+            ->orderBy('created_at', 'desc') // <-- aqui
+            ->get();
+
+        $debtThisMonth = $sales->sum(function ($sale) {
+            return $sale->installments
+                ->whereIn('status', ['pending', 'overdue'])
+                ->filter(function ($installment) {
+                    return Carbon::parse($installment->due_date)->isSameMonth(now());
+                })
+                ->sum('amount');
+        });
+
+        // Calcular o valor pago este mês considerando as installments paid
+        $paid = $sales->sum(function ($sale) {
+            return $sale->installments->where('status', 'paid')->sum('amount');
+        });
+
+        foreach ($sales as $sale) {
+            $sale->paid = $sale->relationLoaded('installments')
+                ? $sale->installments->where('status', 'paid')->sum('amount')
+                : 0;
+
+            // Calcular o valor devido considerando as installments pending e overdue de cada venda
+            $sale->debt = $sale->relationLoaded('installments')
+                ? $sale->installments->whereIn('status', ['pending', 'overdue'])->sum('amount')
+                : 0;
+        }
+
+
+        foreach ($sales as $sale) {
+            // Verificar se a venda possui parcelas pendentes ou vencidas
+            $sale->hasPendingOrOverdueInstallments = $sale->installments
+                ->whereIn('status', ['pending', 'overdue'])
+                ->count() > 0;
+
+            // Definir forma de pagamento
+            $sale->payment_method = $sale->installments->count() > 1 ? 'A Prazo' : 'A Vista';
+
+            // Traduzir status das parcelas
+            $sale->installments->each(function ($installment) {
+                switch ($installment->status) {
+                    case 'pending':
+                        $installment->status = 'Pendente';
+                        break;
+                    case 'overdue':
+                        $installment->status = 'Vencida';
+                        break;
+                    case 'paid':
+                        $installment->status = 'Pago';
+                        break;
+                }
+            });
+        }
+
+        return PDF::loadView('reports.customer_extract', [
+            'sales' => $sales,
+            'debtThisMonth' => $debtThisMonth,
+            'reportDate' => now()->format('d/m/Y H:i')
+        ])->stream('Extrato ' . $sales[0]->customer->name . '.pdf');
     }
 }

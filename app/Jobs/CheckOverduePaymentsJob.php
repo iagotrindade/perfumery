@@ -2,14 +2,15 @@
 
 namespace App\Jobs;
 
+use Carbon\Carbon;
 use App\Models\SaleInstallment;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use App\Http\Controllers\ReportController;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Carbon\Carbon;
 
 class CheckOverduePaymentsJob implements ShouldQueue
 {
@@ -27,5 +28,8 @@ class CheckOverduePaymentsJob implements ShouldQueue
         SaleInstallment::where('status', 'pending')
             ->whereDate('due_date', '<', $today)
             ->update(['status' => 'overdue']);
+
+        // Adiciona um LOG
+        Log::info('Verificação de pagamentos vencidos realizada em ' . Carbon::now()->toDateTimeString());
     }
 }
