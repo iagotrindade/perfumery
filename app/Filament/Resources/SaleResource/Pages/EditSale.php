@@ -34,27 +34,51 @@ class EditSale extends EditRecord
         if (!empty($data['partial_payment']) && $data['partial_payment'] != 0) {
             $partialPayment = $data['partial_payment'];
 
-            // Filtra uma única vez as parcelas não pagas
-            $openInstallments = $record->installments->where('status', '!=', 'paid');
+            // Pega as parcelas em aberto ordenadas por vencimento mais próximo
+            $openInstallments = $record->installments
+                ->where('status', '!=', 'paid')
+                ->sortBy('due_date')
+                ->values();
 
-            $installmentsCount = $openInstallments->count();
+            if ($openInstallments->isNotEmpty()) {
+                $first = $openInstallments->first();
+                $firstOriginalAmount = $first->amount;
 
-            if ($installmentsCount > 0) {
-                $partialPaymentPerInstallment = $partialPayment / $installmentsCount;
+                // Marca a primeira como paga, independentemente de ter sido integralmente quitada
+                $first->update([
+                    'amount' => $partialPayment,
+                    'status' => 'paid',
+                    'payment_date' => now()->toDateString(),
+                ]);
 
-                $openInstallments->each(function ($installment) use ($partialPaymentPerInstallment) {
-                    $installment->amount -= $partialPaymentPerInstallment;
-                    $installment->save();
-                });
+                $openInstallments = $openInstallments->slice(1); // Remove a primeira
 
-                $data['description'] = 'Pagamento parcial de R$' . $partialPayment.' no dia ' . now()->format('d/m/Y') . '. ' . $data['description'];
+                $remainingCount = $openInstallments->count();
+
+                if ($remainingCount > 0) {
+                    $diferenca = $firstOriginalAmount - $partialPayment;
+
+                    // Se diferença > 0 → cliente pagou menos, dilui acréscimo nas próximas
+                    // Se diferença < 0 → cliente pagou mais, dilui desconto nas próximas
+                    $installmentAdjustment = $diferenca / $remainingCount;
+
+                    foreach ($openInstallments as $installment) {
+                        $installment->update([
+                            'amount' => $installment->amount + $installmentAdjustment,
+                        ]);
+                    }
+                }
+
+                // Descrição do pagamento
+                $data['description'] = 'Pagamento parcial de R$' . number_format($partialPayment, 2, ',', '.') .
+                    ' no dia ' . now()->format('d/m/Y') . '. ' . ($data['description'] ?? '');
             }
         }
 
-        // Atualiza os dados do record
+        // Atualiza os dados da venda
         $record->update($data);
 
-        // Enviar notificação para todos os usuários
+        // Notifica todos os usuários
         $recipients = User::all();
         $authUser = Auth::user();
 
@@ -67,7 +91,6 @@ class EditSale extends EditRecord
 
         return $record;
     }
-
 
     protected function getHeaderActions(): array
     {
