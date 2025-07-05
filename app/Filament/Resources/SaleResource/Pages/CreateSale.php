@@ -68,7 +68,7 @@ class CreateSale extends CreateRecord
                         ->label('Limite disponível')
                         ->prefix('R$')
                         ->disabled()
-                        ->formatStateUsing(fn($state) => number_format($state, 2, ',', '.')),
+                        ->formatStateUsing(fn($state) => is_numeric($state) ? number_format($state, 2, ',', '.') : $state),
 
                     Repeater::make('products')
                         ->label('Produtos')
@@ -108,19 +108,37 @@ class CreateSale extends CreateRecord
                             $finalTotal = max($total - $discount, 0);
                             $set('total', $finalTotal);
 
-                            // Atualiza parcelas
+                            // Recalcular parcelas SOMENTE se ainda não houverem parcelas válidas
                             $count = (int) $get('installments_count');
-                            if ($count && $finalTotal) {
+                            $existing = $get('installments');
+                            $shouldOverwrite = !$existing || count($existing) !== $count;
+
+                            if (!$shouldOverwrite) {
+                                foreach ($existing as $installment) {
+                                    if (empty($installment['due_date']) || empty($installment['amount'])) {
+                                        $shouldOverwrite = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if ($count && $finalTotal && $shouldOverwrite) {
                                 $dueDate = Carbon::now()->addMonth();
                                 $amount = round($finalTotal / $count, 2);
-
                                 $installments = [];
+                                $totalSum = 0;
+
                                 for ($i = 0; $i < $count; $i++) {
+                                    $value = $amount;
+                                    if ($i === $count - 1) {
+                                        $value = round($finalTotal - $totalSum, 2);
+                                    }
                                     $installments[] = [
                                         'installment_number' => $i + 1,
                                         'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
-                                        'amount' => $amount,
+                                        'amount' => $value,
                                     ];
+                                    $totalSum += $value;
                                 }
 
                                 $set('installments', $installments);
@@ -146,17 +164,37 @@ class CreateSale extends CreateRecord
                             $dueDate = Carbon::now()->addMonth();
                             $amount = round($total / $count, 2);
 
-                            $installments = [];
-                            for ($i = 0; $i < $count; $i++) {
-                                $installments[] = [
-                                    'installment_number' => $i + 1,
-                                    'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
-                                    'amount' => $amount,
-                                ];
+                            $existing = $get('installments');
+                            $shouldOverwrite = !$existing || count($existing) !== $count;
+
+                            if (!$shouldOverwrite) {
+                                foreach ($existing as $installment) {
+                                    if (empty($installment['due_date']) || empty($installment['amount'])) {
+                                        $shouldOverwrite = true;
+                                        break;
+                                    }
+                                }
                             }
 
-                            $set('installments', $installments);
-                            $set('summary_installments', $installments);
+                            if ($shouldOverwrite) {
+                                $installments = [];
+                                $totalSum = 0;
+                                for ($i = 0; $i < $count; $i++) {
+                                    $value = $amount;
+                                    if ($i === $count - 1) {
+                                        $value = round($total - $totalSum, 2);
+                                    }
+                                    $installments[] = [
+                                        'installment_number' => $i + 1,
+                                        'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
+                                        'amount' => $value,
+                                    ];
+                                    $totalSum += $value;
+                                }
+
+                                $set('installments', $installments);
+                                $set('summary_installments', $installments);
+                            }
                         }),
 
                     Repeater::make('installments')
@@ -166,11 +204,17 @@ class CreateSale extends CreateRecord
                         ->schema([
                             TextInput::make('installment_number')->label('Nº')->readOnly(),
                             DatePicker::make('due_date')->label('Vencimento'),
-                            TextInput::make('amount')->label('Valor')->prefix('R$')->numeric()
-                                ->formatStateUsing(fn($state) => number_format($state, 2, ',', '.')),
+                            TextInput::make('amount')
+                                ->label('Valor')
+                                ->prefix('R$')
+                                ->numeric()
+                                ->formatStateUsing(fn($state) => number_format(round($state, 2), 2, ',', '.')),
                         ])
                         ->addable(false)
-                        ->columns(3),
+                        ->columns(3)
+                        ->afterStateUpdated(function ($set, $state) {
+                            $set('summary_installments', $state);
+                        }),
 
                     TextInput::make('discount')
                         ->label('Desconto')
@@ -183,17 +227,35 @@ class CreateSale extends CreateRecord
                             $set('total', $finalTotal);
 
                             $count = (int) $get('installments_count');
-                            if ($count && $finalTotal) {
+                            $existing = $get('installments');
+                            $shouldOverwrite = !$existing || count($existing) !== $count;
+
+                            if (!$shouldOverwrite) {
+                                foreach ($existing as $installment) {
+                                    if (empty($installment['due_date']) || empty($installment['amount'])) {
+                                        $shouldOverwrite = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if ($count && $finalTotal && $shouldOverwrite) {
                                 $dueDate = Carbon::now()->addMonth();
                                 $amount = round($finalTotal / $count, 2);
 
                                 $installments = [];
+                                $totalSum = 0;
                                 for ($i = 0; $i < $count; $i++) {
+                                    $value = $amount;
+                                    if ($i === $count - 1) {
+                                        $value = round($finalTotal - $totalSum, 2);
+                                    }
                                     $installments[] = [
                                         'installment_number' => $i + 1,
                                         'due_date' => $dueDate->copy()->addMonths($i)->toDateString(),
-                                        'amount' => $amount,
+                                        'amount' => $value,
                                     ];
+                                    $totalSum += $value;
                                 }
 
                                 $set('installments', $installments);
@@ -218,21 +280,21 @@ class CreateSale extends CreateRecord
                         ->prefix('R$')
                         ->label('Total Bruto')
                         ->readOnly()
-                        ->formatStateUsing(fn($state) => number_format($state, 2, ',', '.')),
+                        ->formatStateUsing(fn($state) => number_format(round($state, 2), 2, ',', '.')),
 
                     TextInput::make('discount_applied')
                         ->default(0)
                         ->prefix('R$')
                         ->label('Desconto Aplicado')
                         ->readOnly()
-                        ->formatStateUsing(fn($state) => number_format($state, 2, ',', '.')),
+                        ->formatStateUsing(fn($state) => number_format(round($state, 2), 2, ',', '.')),
 
                     TextInput::make('total')
                         ->numeric()
                         ->prefix('R$')
                         ->label('Total com Desconto')
                         ->readOnly()
-                        ->formatStateUsing(fn($state) => number_format($state, 2, ',', '.')),
+                        ->formatStateUsing(fn($state) => number_format(round($state, 2), 2, ',', '.')),
 
                     Repeater::make('summary_installments')
                         ->label('Parcelas')
@@ -258,7 +320,7 @@ class CreateSale extends CreateRecord
                         ->addable(false)
                         ->deletable(false)
                         ->columns(3),
-                ])
+                ]),
         ];
     }
 
